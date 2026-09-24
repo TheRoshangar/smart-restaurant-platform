@@ -4,6 +4,7 @@ import Orders from './screens/Orders'
 import Kitchen from './screens/Kitchen'
 import Report from './screens/Report'
 import MenuAdmin from './screens/MenuAdmin'
+import MenuImport from './screens/MenuImport'
 export interface Tab {
   id: string
   label: string
@@ -17,4 +18,5 @@ export const tabs: Tab[] = [
   { id: 'kitchen', label: 'آشپزخانه و بار', roles: ['kitchen', 'manager'], component: Kitchen },
   { id: 'report', label: 'گزارش', roles: ['manager'], component: Report },
   { id: 'menu', label: 'موجودی منو', roles: ['manager'], component: MenuAdmin },
+  { id: 'import', label: 'ورود منو با AI', roles: ['manager'], component: MenuImport },
 ]

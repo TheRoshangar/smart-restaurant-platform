@@ -1,3 +1,4 @@
+import 'dotenv/config';
 // Tests run against a real Postgres. There is no mocking layer for RLS —
 // mocking the database would mock away the exact thing under test.
 // DATABASE_URL is the application role (RLS applies). DATABASE_URL_ADMIN is the

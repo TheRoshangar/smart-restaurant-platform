@@ -20,11 +20,12 @@ cp .env.example .env
 # set JWT_SECRET — there is no default, the server refuses to start without one
 openssl rand -base64 48
 
-npm run setup     # installs, starts Postgres, migrates, seeds
-npm run dev
+npm run setup     # installs (API + web), starts Postgres, migrates, seeds
+npm run dev       # API on :3000
+npm run dev:web   # web app on :5173 (proxies /api to :3000) — open this one
 ```
 
-`npm run setup` is `npm install && docker compose up -d --wait && npm run migrate && npm run seed`.
+`npm run setup` is `npm install && npm --prefix frontend install && docker compose up -d --wait && npm run migrate && npm run seed`.
 
 ```bash
 npm test          # 55 tests, against a real Postgres
@@ -183,10 +184,14 @@ Target is domestic Iranian PaaS (Liara / ArvanCloud / Parspack) or a VPS — for
 cloud is not available. Requires Postgres 16 and HTTPS termination in front.
 
 ```bash
-npm ci --omit=dev && npm run build
-DATABASE_URL_ADMIN=... npm run migrate
-DATABASE_URL=... JWT_SECRET=... npm start
+npm ci && npm --prefix frontend ci && npm run build   # builds API and web app
+DATABASE_URL_ADMIN=... npm run migrate:prod
+DATABASE_URL=... JWT_SECRET=... npm start             # serves API + web app on one port
 ```
+
+The API process serves `frontend/dist` itself, so there is one origin and one thing
+to deploy. A `Dockerfile` is included (build once, run anywhere that runs a container).
+On a managed database, create the `mizban_app` role first (see `db/init-role.sql`).
 
 Health check on `/health`. The process refuses to start on invalid configuration,
 an unreachable database, or a database role that can bypass RLS.
@@ -197,5 +202,6 @@ an unreachable database, or a database role that can bypass RLS.
 
 Stated plainly, and expanded in [`HANDOVER.md`](./HANDOVER.md): no offline mode,
 no item modifiers, no inventory, no bill splitting by seat, no reservations, no
-Moadian e-invoice transmission, no customer-facing menu, and no web UI in this
-repository — the deliverable here is the API, the data model and the guarantees.
+Moadian e-invoice transmission and no customer-facing menu. The staff web app
+(`frontend/`) is deliberately plain: RTL Persian screens per role, no offline mode,
+no printing, no reservations.

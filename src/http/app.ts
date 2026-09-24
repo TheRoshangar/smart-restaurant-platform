@@ -14,7 +14,10 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyStatic from '@fastify/static';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 
 import { AppError, errors, toErrorBody } from '../lib/errors.js';
@@ -127,6 +130,10 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Authentication. Public routes opt out via config.public.
   app.addHook('preHandler', async (req) => {
+    // Only /api/* carries data. The web app's own files (and /health) are not
+    // behind a token, because a browser must be able to load the login page.
+    if (!req.url.startsWith('/api/')) return;
+
     const routeOptions = (req as { routeOptions?: { config?: { public?: boolean } } }).routeOptions;
     if (routeOptions?.config?.public) return;
 
@@ -163,7 +170,24 @@ export async function buildApp(): Promise<FastifyInstance> {
       toErrorBody(new AppError('internal', 'خطای غیرمنتظره. لطفاً دوباره تلاش کنید.'), req.requestId));
   });
 
+  // The built web app (frontend/dist), when present, is served by this same
+  // process: one origin, no CORS, one thing to deploy. In development the Vite
+  // dev server is used instead and this block is skipped.
+  const webRoot = resolve(process.cwd(), 'frontend/dist');
+  const serveWeb = existsSync(webRoot);
+  if (serveWeb) {
+    await app.register(fastifyStatic, {
+      root: webRoot,
+      wildcard: false,
+    });
+  }
+
   app.setNotFoundHandler((req, reply) => {
+    // Unknown /api paths stay a JSON 404. Any other GET is a client-side route,
+    // so hand back the app shell and let the router decide.
+    if (serveWeb && req.method === 'GET' && !req.url.startsWith('/api/')) {
+      return reply.sendFile('index.html');
+    }
     reply.status(404).send(toErrorBody(errors.notFound('مسیر'), req.requestId));
   });
 

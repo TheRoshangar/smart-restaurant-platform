@@ -1,0 +1,24 @@
+# Local Postgres only. The app runs on the host via `npm run dev` so that
+# reloads are instant; there is no value in containerising it for development.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mizban-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mizban
+    ports:
+      - "5432:5432"
+    volumes:
+      - mizban-pgdata:/var/lib/postgresql/data
+      # Creates the non-privileged application role before migrations run.
+      - ./db/init-role.sql:/docker-entrypoint-initdb.d/00-role.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mizban"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mizban-pgdata:
